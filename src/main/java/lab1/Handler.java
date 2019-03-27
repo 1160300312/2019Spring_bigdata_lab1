@@ -13,6 +13,10 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.mllib.linalg.Vectors;
+import org.apache.spark.mllib.regression.LabeledPoint;
+import org.apache.spark.mllib.regression.LinearRegressionModel;
+import org.apache.spark.mllib.regression.LinearRegressionWithSGD;
 
 import scala.Serializable;
 import scala.Tuple2;
@@ -162,7 +166,7 @@ public class Handler implements Serializable{
 				if(arg0.user_birthday.matches("[A-Za-z]* [0-9]*,[0-9]*")){
 					String[] words1 = arg0.user_birthday.split(" ");
 					String[] words2 = words1[1].split(",");
-					System.out.println(words1[0]);
+//					System.out.println(words1[0]);
 					String month = null;
 					if((months_list.indexOf(words1[0])+1)<=9){
 						month = "0" + (months_list.indexOf(words1[0])+1);
@@ -236,14 +240,62 @@ public class Handler implements Serializable{
 						while(itr2.hasNext()){
 							POI_Review mid = itr2.next();
 							if(mid.user_income.equals("?")){
+								System.out.println(mid);
 								mid.user_income = "" + (int)income;
 								list.add(mid);
+								System.out.println("  " + mid);
 							}
 						}
 						return list.iterator();
 					}
+				});	
+		
+		JavaRDD<POI_Review> filter = result.filter(new Function<POI_Review, Boolean>(){
+			private static final long serialVersionUID = 1L;
+
+			public Boolean call(POI_Review arg0) throws Exception {
+				if(arg0.rating.equals("?"))
+					return false;
+				return true;
+			}
+		});
+		
+		JavaRDD<LabeledPoint> parsedData = filter.map(
+				new Function<POI_Review, LabeledPoint>(){
+					private static final long serialVersionUID = 1L;
+
+					public LabeledPoint call(POI_Review arg0) throws Exception {
+						double v[] = new double[4];
+						v[0] = Double.parseDouble(arg0.user_income);
+						v[1] = Double.parseDouble(arg0.latitude);
+						v[2] = Double.parseDouble(arg0.longitude);
+						v[3] = Double.parseDouble(arg0.height);
+						return new LabeledPoint(Double.parseDouble(arg0.rating),Vectors.dense(v));
+					}
 				});
 		
-		return result;
+		int numIterations = 100;
+		double stepSize = 1e-5;
+		final LinearRegressionModel model = LinearRegressionWithSGD.train(JavaRDD.toRDD(parsedData), numIterations, stepSize);
+		JavaRDD<POI_Review> regression_result = result.map(new Function<POI_Review,POI_Review>(){
+			private static final long serialVersionUID = 1L;
+
+			public POI_Review call(POI_Review arg0) throws Exception {
+				if(arg0.rating.equals("?")){
+					double[] v = new double[4];
+					v[0] = Double.parseDouble(arg0.user_income);
+					v[1] = Double.parseDouble(arg0.latitude);
+					v[2] = Double.parseDouble(arg0.longitude);
+					v[3] = Double.parseDouble(arg0.height);
+					DecimalFormat df = new DecimalFormat("#.00");
+					arg0.rating = df.format(model.predict(Vectors.dense(v)));
+					System.out.println(arg0);
+					return arg0;
+				}
+				return arg0;
+			}
+		});
+		
+		return regression_result;
 	}
 }

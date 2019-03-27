@@ -9,8 +9,8 @@ import org.apache.spark.api.java.function.Function;
 
 public class Main {
 	public static void main(String args[]){
-		String inputpath = "hdfs://127.0.0.1:9000/user/Administrator/data/lab1/D_Filtered/part-*";
-		String outputpath = "hdfs://127.0.0.1:9000/user/Administrator/data/lab1/D_Normalized&Standardized";
+		String inputpath = "hdfs://127.0.0.1:9000/user/Administrator/data/lab1/D_Normalized&Standardized/part-*";
+		String outputpath = "hdfs://127.0.0.1:9000/user/Administrator/data/lab1/D_Preprocessed";
 		SparkConf sparkConf = new SparkConf().setAppName("lab1");
 		JavaSparkContext sc = new JavaSparkContext(sparkConf);
 		JavaRDD<String> input_rdd = sc.textFile(inputpath);
@@ -20,9 +20,10 @@ public class Main {
 		JavaRDD<POI_Review> transformed_rdd = handler.transformer(input_rdd); 
 //		JavaRDD<POI_Review> sample_result = handler.sample(transformed_rdd);
 //		JavaRDD<POI_Review> filter_result = handler.filter(transformed_rdd);
-		JavaRDD<POI_Review> standandnorm_result = handler.standandnorm(transformed_rdd);
-		standandnorm_result.collect();
-		standandnorm_result.saveAsTextFile(outputpath);
+//		JavaRDD<POI_Review> standandnorm_result = handler.standandnorm(transformed_rdd);
+		JavaRDD<POI_Review> preprocess_result = handler.preprocess(transformed_rdd);
+		preprocess_result.collect();
+//		standandnorm_result.saveAsTextFile(outputpath);
 		
 	}
 }
