@@ -17,7 +17,6 @@ import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.mllib.regression.LinearRegressionModel;
 import org.apache.spark.mllib.regression.LinearRegressionWithSGD;
-
 import scala.Serializable;
 import scala.Tuple2;
 
@@ -81,7 +80,6 @@ public class Handler implements Serializable{
 						}
 						return list.iterator();
 					}
-				
 				});
 		return sample_result;
 	}
@@ -103,7 +101,7 @@ public class Handler implements Serializable{
 				new Function<POI_Review ,Boolean>(){
 					private static final long serialVersionUID = 1L;
 					public Boolean call(POI_Review arg0) throws Exception {
-						System.out.println(arg0);
+//						System.out.println(arg0);
 						if(arg0.rating.equals("?")){
 							return true;
 						}
@@ -200,12 +198,7 @@ public class Handler implements Serializable{
 		});
 		return result;
 	}
-	
-	public JavaRDD<POI_Review> merge(JavaRDD<POI_Review> rdd){
-		JavaRDD<POI_Review> sample_result = sample(rdd);
-		
-		return null;
-	}
+
 	
 	public JavaRDD<POI_Review> preprocess(JavaRDD<POI_Review> rdd){
 		JavaPairRDD<Tuple2<String,String>,POI_Review> ic_pairs = rdd.mapToPair(
@@ -223,6 +216,7 @@ public class Handler implements Serializable{
 
 					public Iterator<POI_Review> call(Tuple2<Tuple2<String, String>, Iterable<POI_Review>> arg0)
 							throws Exception {
+//						System.out.println(arg0._1._1 + " " + arg0._1._2);
 						Iterator<POI_Review> itr1 = arg0._2.iterator();
 						Iterator<POI_Review> itr2 = arg0._2.iterator();
 						List<POI_Review> list = new ArrayList<POI_Review>();
@@ -240,10 +234,10 @@ public class Handler implements Serializable{
 						while(itr2.hasNext()){
 							POI_Review mid = itr2.next();
 							if(mid.user_income.equals("?")){
-								System.out.println(mid);
+//								System.out.println(mid);
 								mid.user_income = "" + (int)income;
 								list.add(mid);
-								System.out.println("  " + mid);
+//								System.out.println("  " + mid);
 							}
 						}
 						return list.iterator();
@@ -254,8 +248,10 @@ public class Handler implements Serializable{
 			private static final long serialVersionUID = 1L;
 
 			public Boolean call(POI_Review arg0) throws Exception {
-				if(arg0.rating.equals("?"))
+				if(arg0.rating.equals("?")){
+//					System.out.println("1111111111111111111111111111");
 					return false;
+				}
 				return true;
 			}
 		});
@@ -274,9 +270,9 @@ public class Handler implements Serializable{
 					}
 				});
 		
-		int numIterations = 100;
-		double stepSize = 1e-5;
-		final LinearRegressionModel model = LinearRegressionWithSGD.train(JavaRDD.toRDD(parsedData), numIterations, stepSize);
+		int numIterations = 1000;
+		double stepSize = 0.0000001;
+		final LinearRegressionModel model = LinearRegressionWithSGD.train(JavaRDD.toRDD(parsedData), numIterations, stepSize, 0.3);
 		JavaRDD<POI_Review> regression_result = result.map(new Function<POI_Review,POI_Review>(){
 			private static final long serialVersionUID = 1L;
 
@@ -288,14 +284,31 @@ public class Handler implements Serializable{
 					v[2] = Double.parseDouble(arg0.longitude);
 					v[3] = Double.parseDouble(arg0.height);
 					DecimalFormat df = new DecimalFormat("#.00");
-					arg0.rating = df.format(model.predict(Vectors.dense(v)));
-					System.out.println(arg0);
+					arg0.rating = "0" + df.format(model.predict(Vectors.dense(v)));
+//					System.out.println("     " + arg0);
 					return arg0;
+				} else{
+//					System.out.println(arg0);
+					double[] v = new double[4];
+					v[0] = Double.parseDouble(arg0.user_income);
+					v[1] = Double.parseDouble(arg0.latitude);
+					v[2] = Double.parseDouble(arg0.longitude);
+					v[3] = Double.parseDouble(arg0.height);
+					DecimalFormat df = new DecimalFormat("#.00");
+					arg0.rating = df.format(model.predict(Vectors.dense(v)));
+//					System.out.println(arg0);
 				}
 				return arg0;
 			}
-		});
-		
+		});	
 		return regression_result;
+	}
+	
+	public JavaRDD<POI_Review> merge(JavaRDD<POI_Review> rdd){
+		JavaRDD<POI_Review> sample_result = sample(rdd);
+		JavaRDD<POI_Review> filter_result = filter(sample_result);
+		JavaRDD<POI_Review> norm_result = standandnorm(filter_result);
+		JavaRDD<POI_Review> process_result = preprocess(norm_result);
+		return process_result;
 	}
 }
