@@ -25,7 +25,7 @@ public class Main {
 //		JavaRDD<POI_Review> standandnorm_result = handler.standandnorm(transformed_rdd);
 		JavaRDD<POI_Review> preprocess_result = handler.preprocess(transformed_rdd);
 //		preprocess_result.collect();
-		preprocess_result.saveAsTextFile(outputpath);
+		//preprocess_result.saveAsTextFile(outputpath);
 		
 	}
 }
