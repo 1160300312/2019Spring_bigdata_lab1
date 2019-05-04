@@ -188,13 +188,15 @@ public class Handler implements Serializable{
 		JavaPairRDD<Integer,float[]> result = input.mapToPair(new PairFunction<String,Integer,float[]>(){
 			private static final long serialVersionUID = 1L;
 
-			public Tuple2<Integer, float[]> call(String arg0) throws Exception {
+			public Tuple2<Integer, float[]> call(String arg) throws Exception {
+				int cls = Integer.parseInt(arg.split("\t")[0]);
+				String arg0 = arg.split("\t")[1];
 				String[] words = arg0.split(",");
-				float[] result = new float[words.length-1];
-				for(int i=1;i<words.length;i++){
-					result[i-1] = Float.parseFloat(words[i]);
+				float[] result = new float[words.length];
+				for(int i=0;i<words.length;i++){
+					result[i] = Float.parseFloat(words[i]);
 				}
-				return new Tuple2<Integer,float[]>((int)Float.parseFloat(words[0]),result);
+				return new Tuple2<Integer,float[]>(cls,result);
 			}
 		});
 		return result;
@@ -334,5 +336,89 @@ public class Handler implements Serializable{
 	
 	public float countGauss(float avg, float mean, float x){
 		return (float) (1.0/Math.sqrt(mean*2*Math.PI)*Math.pow(Math.E, -1*((x-avg)*(x-avg))/(2*mean)));
+	}
+	
+	public float[] trainLogistic(JavaPairRDD<Integer, float[]> input, float alpha, float lambda,JavaPairRDD<Integer, float[]> inputtest){
+		final float[] w = new float[19];
+		for(int i=0;i<w.length;i++){
+			w[i] = 0;
+		}
+		int cycle = 100;
+		int count = 0;
+		while(count<cycle){
+			JavaRDD<float[]> gradient = input.map(new Function<Tuple2<Integer,float[]>, float[]>(){
+				private static final long serialVersionUID = 1L;
+
+				public float[] call(Tuple2<Integer, float[]> arg0) throws Exception {
+					Handler h = new Handler();
+					float[] result = new float[arg0._2.length+1];
+					result[0] = arg0._1 - h.countLogistic(w, arg0._2);
+					for(int i=1;i<=arg0._2.length;i++){
+						result[i] = arg0._2[i-1] * (arg0._1 - h.countLogistic(w, arg0._2));
+					}
+					return result;
+				}
+			});
+			List<float[]> collect_result = gradient.collect();
+			float[] sum = new float[19];
+			for(int i=0;i<sum.length;i++){
+				sum[i] = 0;
+			}
+			for(int i=0;i<collect_result.size();i++){
+				for(int j=0;j<19;j++){
+					sum[j] += collect_result.get(i)[j];
+				}
+			}
+			for(int i=0;i<19;i++){
+				sum[i] /= collect_result.size();
+				w[i] = w[i] - alpha * lambda * w[i] - alpha * sum[i];
+			}
+			count ++;
+			for(int i=0;i<w.length-1;i++){
+				System.out.print(w[i] + " ");
+			}
+			System.out.println(w[w.length-1]);;
+			System.out.println(this.testLogistic(w, inputtest));
+		}
+		return w;
+	}
+	
+	public float testLogistic(final float[] w, JavaPairRDD<Integer, float[]> input){
+		JavaPairRDD<Integer, Integer> test = input.mapToPair(new PairFunction<Tuple2<Integer,float[]>,Integer,Integer>(){
+			private static final long serialVersionUID = 1L;
+
+			public Tuple2<Integer, Integer> call(Tuple2<Integer, float[]> arg0) throws Exception {
+				float judge = 0;
+				judge += w[0];
+				for(int i=0;i<arg0._2.length;i++){
+					judge += w[i+1] * arg0._2[i];
+				}
+				if(judge > 0){
+					return new Tuple2<Integer,Integer>(arg0._1, 0);
+				} else{
+					return new Tuple2<Integer,Integer>(arg0._1, 1);
+				}
+			}
+		});
+		
+		List<Tuple2<Integer,Integer>> result = test.collect();
+		float sum = result.size();
+		float right_sum = 0;
+		for(int i=0;i<result.size();i++){
+			if(result.get(i)._1 == result.get(i)._2){
+				right_sum ++;
+			}
+		}
+		System.out.println(right_sum);
+		return right_sum / sum;
+	}
+	
+	public float countLogistic(float[] w, float[] x){
+		float sum = 0;
+		sum += w[0];
+		for(int i=0;i<x.length;i++){
+			sum += w[i+1] * x[i];
+		}
+		return (float) (1.0/(1 + Math.exp(sum)));
 	}
 }
