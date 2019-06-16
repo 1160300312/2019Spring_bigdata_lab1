@@ -5,10 +5,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
 
-public class SSSPCombiner implements Combiner{
+public class PageRankCombiner implements Combiner{
 	
-	final int INF = 6000000;
-
 	@Override
 	public Map<Integer, Message> combine(Map<Integer, Queue<Message>> input) {
 		Map<Integer, Message> result = new HashMap<Integer,Message>();
@@ -17,16 +15,15 @@ public class SSSPCombiner implements Combiner{
 			Map.Entry<Integer, Queue<Message>> entry = it.next();
 			Queue<Message> data = entry.getValue();
 			Message m;
-			Message min = new Message();
-			min.ssspvalue = INF;
+			double sum = 0;
 			while((m=data.poll())!=null){
-				if(m.ssspvalue < min.ssspvalue){
-					min.ssspvalue = m.ssspvalue;
-				}
+				sum += m.pagerankvalue;
 			}
-			result.put(entry.getKey(), min);
+			Message re = new Message();
+			re.pagerankvalue = sum;
+			result.put(entry.getKey(), re);
 		}
+		
 		return result;
 	}
-
 }

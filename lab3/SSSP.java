@@ -7,7 +7,9 @@ import java.io.IOException;
 public class SSSP extends Master<Integer,Integer>{
 	final int INF = 6000000;
 	
+	@Override
 	public void run(int k){
+		Statistics st = new Statistics(this);
 		for(int i=0;i<k;i++){
 			SSSPWorker worker = new SSSPWorker(i);
 			worker.load();
@@ -17,6 +19,8 @@ public class SSSP extends Master<Integer,Integer>{
 				worker.useCombiner(this.combiner);
 			}
 		}
+		st.getEdgeNum();
+		st.getVertexNum();
 		while(true){
 			for(Worker<Integer, Integer> w : workers){
 				w.run(this);
@@ -28,6 +32,7 @@ public class SSSP extends Master<Integer,Integer>{
 				w.finishABSP();
 			}	
 		}
+		st.getBSPMessage();
 	}
 	
 	public void writeResult(String filepath){
@@ -52,9 +57,9 @@ public class SSSP extends Master<Integer,Integer>{
 	
 	public static void main(String args[]){
 		SSSP master = new SSSP();
-		master.useCombiner(new SSSPCombiner());
+		//master.useCombiner(new SSSPCombiner());
 		master.run(8);
 		//master.partition("test.txt", 2);
-		master.writeResult("SSSP_result_use_combiner");
+		master.writeResult("SSSP_result_test");
 	}
 }

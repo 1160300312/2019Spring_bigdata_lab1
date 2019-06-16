@@ -1,5 +1,10 @@
 package lab3;
 
-public class Aggregator {
+import java.util.List;
 
+public interface Aggregator<V,E,R> {
+	
+	public void report(Vertex<V,E> v);
+	
+	public R aggregate();
 }

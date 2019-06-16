@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class SSSPVertex extends Vertex<Integer,Integer>{
 	
@@ -19,8 +20,8 @@ public class SSSPVertex extends Vertex<Integer,Integer>{
 		Message m;
 		int flag = 0;
 		while((m=msg.poll())!=null){
-			if(this.getValue() > m.value){
-				this.setValue(m.value);
+			if(this.getValue() > m.ssspvalue){
+				this.setValue(m.ssspvalue);
 				//System.out.println(m.value);
 				flag = 1;
 			}
@@ -33,6 +34,8 @@ public class SSSPVertex extends Vertex<Integer,Integer>{
 			//System.out.println(this.getId() + " active");
 		}
 	}
+	
+	
 
 
 	@Override
@@ -42,7 +45,7 @@ public class SSSPVertex extends Vertex<Integer,Integer>{
 		if(this.getValue()!=INF){
 			for(Edge<Integer> e:edges){
 				Message new_msg = new Message();
-				new_msg.value = e.value + this.getValue();
+				new_msg.ssspvalue = e.value + this.getValue();
 				result.put(e.des, new_msg);
 			}
 		}

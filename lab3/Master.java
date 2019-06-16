@@ -24,8 +24,8 @@ public abstract class Master<V,E> {
 	public boolean stop(){
 		boolean result = true;
 		for(Worker<V,E> w : workers){
-			if(!w.isDone()){
-				result = false;
+				if(!w.isDone()){
+					result = false;
 			}
 		}
 		return result;

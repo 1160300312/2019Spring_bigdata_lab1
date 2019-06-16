@@ -15,7 +15,6 @@ public abstract class Worker<V,E> {
 	int id;
 	private boolean use_combiner = false;
 	private Combiner combiner;
-	
 	List<Vertex<V,E>> vertexes;
 	Map<Integer, List<Edge<E>>> edges;
 	Map<Integer, Queue<Message>> last_msg;
@@ -23,33 +22,25 @@ public abstract class Worker<V,E> {
 	
 	Map<Integer, Queue<Message>> send_queue;
 	
+	List<Long> use_time;
+	List<Integer> message_send_num;
+	
 	final int INF = 6000000;
 	
 	public Worker(int id){
 		this.id = id;
 		this.vertexes = new ArrayList<Vertex<V,E>>();
 		this.edges = new HashMap<Integer,List<Edge<E>>>();
+		use_time = new ArrayList<Long>();
+		message_send_num = new ArrayList<Integer>();
 	}
 	
-	public void init(){
-		last_msg = new HashMap<Integer, Queue<Message>>();
-		for(Vertex<V,E> v:vertexes){
-			last_msg.put(v.getId(), new LinkedBlockingQueue<Message>());
-		}
-		current_msg = new HashMap<Integer, Queue<Message>>();
-		for(Vertex<V,E> v:vertexes){
-			current_msg.put(v.getId(), new LinkedBlockingQueue<Message>());
-		}
-		if(last_msg.containsKey(0)){
-			Message m = new Message();
-			m.value = 0;
-			last_msg.get(0).add(m);
-		}
-		send_queue = new HashMap<Integer, Queue<Message>>();
-	}
+	public abstract void init();
 	 
 	
 	public void run(Master<V,E> master){
+		long startTime = System.currentTimeMillis();
+		int message_send_sum = 0;
 		for(Vertex<V,E> v: vertexes){
 			//收到其他顶点信息的顶点设为avtive
 			if(last_msg.get(v.getId()).size() != 0){
@@ -71,6 +62,8 @@ public abstract class Worker<V,E> {
 							Worker<V,E> w = master.findWorker(entry.getKey());
 							if(w != null){
 								w.current_msg.get(entry.getKey()).add(entry.getValue());
+								//向另一个worker发消息
+								message_send_sum++;
 							} else{
 								System.out.println("cannot find vertex " + entry.getKey());
 							}
@@ -99,6 +92,7 @@ public abstract class Worker<V,E> {
 						Worker<V,E> w = master.findWorker(entry.getKey());
 						if(w != null){
 							w.current_msg.get(entry.getKey()).add(entry.getValue());
+							message_send_sum++;
 						} else{
 							System.out.println("cannot find vertex " + entry.getKey());
 						}
@@ -106,6 +100,9 @@ public abstract class Worker<V,E> {
 				}
 			}
 		}
+		long endTime = System.currentTimeMillis();
+		this.use_time.add(endTime-startTime);
+		this.message_send_num.add(message_send_sum);
 	}
 	
 	public void finishABSP(){
